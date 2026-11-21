@@ -37,10 +37,9 @@ def src(group):
     return "140" if p == "140tr" else p
 
 
-def load_index(root, manifest="manifest.csv"):
-    """[(path, class index, group)] from <root>/<manifest> (manifest.csv from prepare_data.py,
-    manifest_full.csv from add_140_train.py)."""
-    with open(root / manifest, encoding="utf-8-sig") as f:
+def load_index(root):
+    """[(path, class index, group)] from <root>/manifest.csv (written by prepare_data.py)."""
+    with open(root / "manifest.csv", encoding="utf-8-sig") as f:
         return [(str(root / r["path"]), CLASSES.index(r["class"]), r["group"]) for r in csv.DictReader(f)]
 
 
@@ -249,7 +248,8 @@ def main():
     ap.add_argument("--smoothing", type=float, default=0.1)
     ap.add_argument("--no-class-weight", action="store_true", help="plain CE instead of inverse-frequency weights")
     ap.add_argument("--subset", type=int, default=0, help="random train subset size, 0 = all")
-    ap.add_argument("--manifest", default="manifest.csv", help="manifest_full.csv adds the 140 Training split")
+    ap.add_argument("--skip-140tr", action="store_true",
+                    help="leave out the dataset 140 Training split (source 140tr), as in the earlier experiments")
     ap.add_argument("--val-frac", type=float, default=0.1)
     ap.add_argument("--split", default="object", choices=["object", "capture"],
                     help="capture: hold out whole 71385 capture sessions (batch+date) for val; 140 stays per object")
@@ -279,7 +279,9 @@ def main():
     out = ROOT / "runs" / a.name
     out.mkdir(parents=True, exist_ok=True)
 
-    tr, va = split(load_index(ROOT, a.manifest), a.val_frac, a.split)
+    tr, va = split(load_index(ROOT), a.val_frac, a.split)
+    if a.skip_140tr:
+        tr = [x for x in tr if not x[2].startswith("140tr_")]
     if a.train_source != "all":
         tr = [x for x in tr if src(x[2]) == a.train_source]
     if a.subset:
