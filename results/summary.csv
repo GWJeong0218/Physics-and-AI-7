@@ -1,0 +1,22 @@
+run,arch,aug,epochs,val_split,train_source,source_balance,dropout,n_train,n_val,best_val_epoch,val_macro_acc,test_acc,test_macro_acc,test_acc_vinyl,test_acc_glass,test_acc_plastic,test_acc_can,test_acc_last30_mean,test_acc_whole224_last30_mean,note
+r18_base_centercrop,resnet18,base,100,object,all,False,0.0,118105,13182,97,0.9762,0.6266,0.6204,0.7395,0.4018,0.7364,0.6038,,,first run; val used a center crop instead of letterboxing
+r18_base,resnet18,base,100,object,all,False,0.0,118105,13182,94,0.9809,0.6524,0.6492,0.7059,0.5,0.7209,0.6698,,,reference setting
+r18_base_tt,resnet18,base,100,object,all,False,0.0,118105,13182,92,0.9814,0.6309,0.6265,0.6639,0.4375,0.7442,0.6604,0.6371,0.4916,"same setting as r18_base, rerun with per-epoch test logging"
+r18_base_e300,resnet18,base,300,object,all,False,0.0,118105,13182,280,0.9848,0.6481,0.6433,0.7227,0.4821,0.7364,0.6321,0.6483,0.5204,300 epochs
+r18_aug,resnet18,strong,100,object,all,False,0.0,118105,13182,90,0.9811,0.573,0.5669,0.7059,0.3214,0.6744,0.566,,,strong augmentation
+r18_none,resnet18,none,100,object,all,False,0.0,118105,13182,93,0.9597,0.5,0.4885,0.6555,0.1875,0.7054,0.4057,,,
+r18_none_tt,resnet18,none,100,object,all,False,0.0,118105,13182,93,0.9597,0.5,0.4885,0.6555,0.1875,0.7054,0.4057,0.482,0.4289,"same setting as r18_none, rerun with per-epoch test logging"
+r34_none,resnet34,none,100,object,all,False,0.0,118105,13182,96,0.96,0.4163,0.4027,0.5042,0.1071,0.6977,0.3019,,,
+r50_none,resnet50,none,100,object,all,False,0.0,118105,13182,87,0.9646,0.5,0.4883,0.5966,0.1518,0.7519,0.4528,,,
+r18_squash,resnet18,squash,100,object,all,False,0.0,118105,13182,89,0.956,0.4421,0.4344,0.7395,0.2232,0.4729,0.3019,,,
+r18_squash_tt,resnet18,squash,100,object,all,False,0.0,118105,13182,89,0.956,0.4421,0.4344,0.7395,0.2232,0.4729,0.3019,0.4448,0.4278,"same setting as r18_squash, rerun with per-epoch test logging"
+r18_sqbase_tt,resnet18,squash_base,100,object,all,False,0.0,118105,13182,90,0.9817,0.6459,0.6391,0.7395,0.4286,0.7752,0.6132,0.6356,0.4652,
+r18_drop_e100,resnet18,base,100,object,all,False,0.5,118105,13182,85,0.9795,0.6137,0.6099,0.6975,0.4375,0.6822,0.6226,0.6244,0.5104,dropout 0.5
+r18_drop_e300,resnet18,base,300,object,all,False,0.5,118105,13182,274,0.9839,0.6395,0.6299,0.7731,0.4196,0.7984,0.5283,0.6418,0.5144,"dropout 0.5, 300 epochs"
+r18_cap_cur,resnet18,base,100,capture,all,False,0.0,115992,15295,99,0.9606,0.6288,0.6231,0.6471,0.4554,0.7674,0.6226,0.6256,0.4864,capture-session val split
+r18_cap_5050,resnet18,base,100,capture,all,True,0.0,115992,15295,91,0.9581,0.6524,0.6495,0.6723,0.4911,0.7364,0.6981,0.6428,0.4938,"capture-session val split, sources sampled 50:50"
+r18_cap_only140,resnet18,base,100,capture,140,False,0.0,24935,15295,88,0.8092,0.5923,0.5883,0.5714,0.5446,0.6899,0.5472,0.5938,0.5072,trained on dataset 140 only
+r18_cap_only140_e465,resnet18,base,465,capture,140,False,0.0,24935,15295,435,0.852,0.6266,0.6222,0.5966,0.4911,0.7597,0.6415,0.6278,0.5324,"dataset 140 only, 465 epochs (same number of steps)"
+r18_cap_only71385,resnet18,base,100,capture,71385,False,0.0,91057,15295,76,0.9039,0.4785,0.4744,0.7059,0.0357,0.5426,0.6132,0.4845,0.3907,trained on dataset 71385 only
+r34_cap_base,resnet34,base,100,capture,all,False,0.0,115992,15295,84,0.9614,0.633,0.6282,0.605,0.5179,0.7674,0.6226,0.6348,0.5009,ResNet-34
+r50_cap_base,resnet50,base,100,capture,all,False,0.0,115992,15295,91,0.9548,0.6395,0.6361,0.7143,0.4911,0.6977,0.6415,0.632,0.5046,ResNet-50

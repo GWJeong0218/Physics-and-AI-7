@@ -1,0 +1,25 @@
+{
+  "arch": "resnet18",
+  "size": 224,
+  "epochs": 100,
+  "batch": 128,
+  "lr": 0.001,
+  "wd": 0.05,
+  "warmup": 5,
+  "smoothing": 0.1,
+  "no_class_weight": false,
+  "subset": 0,
+  "val_frac": 0.1,
+  "workers": 10,
+  "seed": 0,
+  "max_steps": 0,
+  "name": "r18_base",
+  "classes": [
+    "vinyl",
+    "glass",
+    "plastic",
+    "can"
+  ],
+  "n_train": 118105,
+  "n_val": 13182
+}
