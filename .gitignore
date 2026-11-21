@@ -1,0 +1,13 @@
+# never commit data, weights or credentials
+.aihub_key
+_aihub_raw/
+_aihub_4class/
+vinyl/
+glass/
+plastic/
+can/
+test/
+runs/
+manifest*.csv
+__pycache__/
+*.pt
