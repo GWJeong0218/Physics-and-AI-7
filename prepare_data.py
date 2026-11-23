@@ -5,14 +5,17 @@
 
 Datasets (both need a download approval on aihub.or.kr and an API key):
   140    생활 폐기물 이미지              outdoor photos; categories 비닐, 유리병, 캔류, 페트병, 플라스틱류
-  71385  생활폐기물 데이터 활용·환류     the "실내형 분류기" (indoor sorter) part
+  71385  생활폐기물 데이터 활용·환류     the "실내형 분류기" (indoor sorter) part, and optionally the
+                                         "어플리케이션" part: phone photos in which the objects are small
 
 API key: environment variable AIHUB_APIKEY, or a file `.aihub_key` next to this script.
 
 Output of `build`:
   <root>/<class>/<source>_<image>_<object index>.jpg     short side 256 px
   <root>/manifest.csv                                    path, class, source, group, detail
-`source` is 140 (dataset 140 Validation split), 140tr (dataset 140 Training split) or 71385.
+`source` is 140 (dataset 140 Validation split), 140tr (dataset 140 Training split), 71385 (indoor sorter),
+71385app (phone photos, object cropped tightly) or 71385appw (same objects with wide context: the object
+fills about half of the crop's side, closer to how a hand-held photo frames it).
 `group` ties together photos that must stay on the same side of a train/val split (see train.py).
 """
 import argparse
@@ -29,10 +32,14 @@ from collections import Counter
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageOps
 
 CLASSES = ("vinyl", "glass", "plastic", "can")
 MARGIN = 0.05   # context kept around each box, as a fraction of the box size
+MARGIN_BY_TAG = {"71385appw": 0.5}  # wide-context variant of the phone photos
+# The phone photos carry an EXIF rotation and their boxes are drawn on the rotated picture (checked by
+# drawing boxes both ways); the other sources are cropped on raw pixels as before.
+EXIF_TAGS = ("71385app", "71385appw")
 MIN_SIDE = 32   # smaller crops are too blurry to classify
 SHORT = 256     # stored short side; training uses 224
 
@@ -52,6 +59,7 @@ KEYS = {
                           47719, 47720, 47721, 47722, 47723, 47724]),
     "71385": ("71385", [*range(514421, 514431), *range(514445, 514455),               # Training images, labels
                         *range(514465, 514475), *range(514485, 514495)]),             # Validation images, labels
+    "71385-app-val": ("71385", [514495, 514475]),                                     # phone photos: labels, images (52 GB)
 }
 # dataset 140: label CLASS -> class
 MAP_140 = {"비닐류": "vinyl", "유리병류": "glass", "페트병류": "plastic", "플라스틱류": "plastic", "캔류": "can"}
@@ -207,6 +215,8 @@ def crop_chunk(job):
                         try:
                             img = Image.open(io.BytesIO(z.read(n)))
                             img.load()
+                            if tag in EXIF_TAGS:
+                                img = ImageOps.exif_transpose(img)
                             img = img.convert("RGB")
                         except Exception:
                             skip["bad_image"] += 1
@@ -214,7 +224,8 @@ def crop_chunk(job):
                     W, H = img.size
                     x1, x2 = sorted((x1, x2))
                     y1, y2 = sorted((y1, y2))
-                    mw, mh = (x2 - x1) * MARGIN, (y2 - y1) * MARGIN
+                    mg = MARGIN_BY_TAG.get(tag, MARGIN)
+                    mw, mh = (x2 - x1) * mg, (y2 - y1) * mg
                     box = (max(0, int(x1 - mw)), max(0, int(y1 - mh)), min(W, int(x2 + mw)), min(H, int(y2 + mh)))
                     if box[2] - box[0] < MIN_SIDE or box[3] - box[1] < MIN_SIDE:
                         skip["too_small"] += 1
@@ -239,9 +250,13 @@ def build(root):
     for z in sorted((raw / "140").rglob("*.zip")):
         if z.name != "라벨링데이터.zip":
             sources.append(("140tr" if "1.Training" in z.as_posix() else "140", z))
+    app = lambda p: "어플리케이션" in p.name
     for lab in sorted((raw / "71385").rglob("[TV]L_*.zip")):   # labels TL_x / VL_x pair with images TS_x / VS_x
-        labels.setdefault("71385", {}).update(labels_71385(lab))
-    sources += [("71385", z) for z in sorted((raw / "71385").rglob("[TV]S_*.zip"))]
+        labels.setdefault("71385app" if app(lab) else "71385", {}).update(labels_71385(lab))
+    if "71385app" in labels:
+        labels["71385appw"] = labels["71385app"]   # same boxes, cropped a second time with wide context
+    for z in sorted((raw / "71385").rglob("[TV]S_*.zip")):
+        sources += [("71385app", z), ("71385appw", z)] if app(z) else [("71385", z)]
     print({t: len(v) for t, v in labels.items()}, "labeled images;", len(sources), "image zips", flush=True)
 
     jobs = []

@@ -32,9 +32,10 @@ MEAN, STD = (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)
 
 
 def src(group):
-    """Data source of a group: "140" (incl. the later-added Training split, prefix 140tr) or "71385"."""
+    """Data source of a group: "140" (incl. its Training split, prefix 140tr), "71385" (indoor sorter),
+    "app" (71385 phone photos, tight crop) or "appw" (the same objects with wide context)."""
     p = group.split("_")[0]
-    return "140" if p == "140tr" else p
+    return {"140tr": "140", "71385app": "app", "71385appw": "appw"}.get(p, p)
 
 
 def load_index(root):
@@ -72,7 +73,7 @@ def split(items, val_frac, mode="object"):
     mode "capture": 71385 is split by whole capture session instead of single image; 140 stays per object."""
     held = capture_val_sessions(items, val_frac) if mode == "capture" else None
     def is_val(g):
-        if g.startswith("140tr_"):  # 140 Training split, added later: train only, so val stays identical
+        if g.startswith(("140tr_", "71385app_", "71385appw_")):  # added later: train only, so val stays identical
             return False
         if held is not None and session(g):
             return session(g) in held
@@ -253,10 +254,16 @@ def main():
     ap.add_argument("--val-frac", type=float, default=0.1)
     ap.add_argument("--split", default="object", choices=["object", "capture"],
                     help="capture: hold out whole 71385 capture sessions (batch+date) for val; 140 stays per object")
-    ap.add_argument("--train-source", default="all", choices=["all", "140", "71385"],
-                    help="train on one AI Hub dataset only; val is unchanged so runs stay comparable")
+    ap.add_argument("--train-source", default="all", choices=["all", "140", "71385", "none"],
+                    help="train on one AI Hub dataset only (none: only what --add-source names); "
+                         "val is unchanged so runs stay comparable")
+    ap.add_argument("--add-source", nargs="*", default=[], choices=["app", "appw"],
+                    help="extra training data: 71385 phone photos, cropped tightly (app) or with wide context (appw)")
+    ap.add_argument("--extra-dir", default="", help="folder with <class>/ subfolders of own photos to add to training")
+    ap.add_argument("--extra-repeat", type=int, default=100,
+                    help="how many times each --extra-dir photo appears per epoch (a few photos would otherwise be drowned out)")
     ap.add_argument("--source-balance", action="store_true",
-                    help="sample training images 50:50 from 140 and 71385 (same number of samples per epoch)")
+                    help="sample training images equally from each source (same number of samples per epoch)")
     ap.add_argument("--workers", type=int, default=10)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--max-steps", type=int, default=0, help="stop each epoch after N steps (smoke test)")
@@ -282,8 +289,13 @@ def main():
     tr, va = split(load_index(ROOT), a.val_frac, a.split)
     if a.skip_140tr:
         tr = [x for x in tr if not x[2].startswith("140tr_")]
-    if a.train_source != "all":
-        tr = [x for x in tr if src(x[2]) == a.train_source]
+    keep = ({"140", "71385"} if a.train_source == "all" else {a.train_source} - {"none"}) | set(a.add_source)
+    tr = [x for x in tr if src(x[2]) in keep]
+    if a.extra_dir:
+        extra = [(str(f), k, "extra_" + f.stem) for k, c in enumerate(CLASSES)
+                 for f in sorted((Path(a.extra_dir) / c).iterdir()) if f.suffix.lower() in (".jpg", ".png", ".webp")]
+        tr += extra * a.extra_repeat
+        print(f"extra: {len(extra)} own photos x {a.extra_repeat} = {len(extra) * a.extra_repeat} samples per epoch")
     if a.subset:
         tr = random.Random(a.seed).sample(tr, min(a.subset, len(tr)))
     counts = Counter(y for _, y, _ in tr)
@@ -294,9 +306,9 @@ def main():
     sampler = None
     if a.source_balance:
         n_src = Counter(src(g) for _, _, g in tr)
-        wts = [0.5 / n_src[src(g)] for _, _, g in tr]  # each source gets half of every epoch
+        wts = [1 / len(n_src) / n_src[src(g)] for _, _, g in tr]  # each source gets an equal share of every epoch
         sampler = torch.utils.data.WeightedRandomSampler(wts, num_samples=len(tr), replacement=True)
-        print(f"source-balance: {dict(n_src)} resampled 50:50, {len(tr)} samples/epoch")
+        print(f"source-balance: {dict(n_src)} resampled to equal shares, {len(tr)} samples/epoch")
     dl_tr = DataLoader(Images(tr, tf_tr, a.size), a.batch, shuffle=sampler is None, sampler=sampler, drop_last=True, **kw)
     dl_va = DataLoader(Images(va, tf_va, a.size), a.batch * 2, **kw)
 

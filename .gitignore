@@ -11,3 +11,5 @@ runs/
 manifest*.csv
 __pycache__/
 *.pt
+test300/
+test_train/
