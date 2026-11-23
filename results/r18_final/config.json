@@ -1,0 +1,38 @@
+{
+  "arch": "resnet18",
+  "size": 224,
+  "epochs": 100,
+  "batch": 128,
+  "lr": 0.001,
+  "wd": 0.05,
+  "warmup": 5,
+  "aug": "base",
+  "dropout": 0.0,
+  "smoothing": 0.1,
+  "no_class_weight": false,
+  "subset": 0,
+  "skip_140tr": false,
+  "val_frac": 0.1,
+  "split": "capture",
+  "train_source": "140",
+  "add_source": [
+    "appw"
+  ],
+  "extra_dir": "test_train",
+  "extra_repeat": 100,
+  "source_balance": false,
+  "workers": 14,
+  "seed": 0,
+  "max_steps": 0,
+  "test_dir": "test300",
+  "name": "r18_final",
+  "resume": "",
+  "classes": [
+    "vinyl",
+    "glass",
+    "plastic",
+    "can"
+  ],
+  "n_train": 288232,
+  "n_val": 15295
+}
